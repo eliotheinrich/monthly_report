@@ -1,0 +1,1 @@
+python make_monthly_report.py 2024-10-01 --num-months 13 --directory "September_Report" --output-extension png
