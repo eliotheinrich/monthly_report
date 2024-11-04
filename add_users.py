@@ -1,7 +1,7 @@
 import dill as pkl
 import pandas as pd
 
-from accounting_utils import capture
+from utils import capture
 
 def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
     unknown_ngids = set()
@@ -32,7 +32,7 @@ def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
             return query_result.iloc[0]['gid']
         else:
             print(f'{ngid} cannot be identified.')
-            return None 
+            return None
 
     def get_id(uid):
         nuid = capture('id -u ' + uid).strip()
@@ -45,7 +45,7 @@ def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
             if gid is None:
                 print(f'Could not find group corresponding to gid {ngid}')
                 unknown_ngids.add(ngid)
-                
+
         elif len(gid_output) == 1:
             gid = gid_output[0]
 
@@ -58,8 +58,8 @@ def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
         t = {'uid': uid}
         return {**t, **get_name(uid), **get_id(uid), **get_email(uid)}
 
-# Collect user information from Andromeda based on the contents of /data/
-# Some users (sysadmins, test accounts, etc) are filtered
+    # Collect user information from Andromeda based on the contents of /data/
+    # Some users (sysadmins, test accounts, etc) are filtered
 
     uids = capture('ls /data/').split()
     uids = [user.strip().replace('/', '') for user in uids]

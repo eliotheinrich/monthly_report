@@ -2,7 +2,7 @@ import openpyxl
 import dill as pkl
 import os
 from openpyxl.utils import get_column_letter
-from accounting_utils import *
+
 
 def make_user_report(date, directory="", pkl_file="users.pkl"):
     with open(pkl_file, "rb") as f:
@@ -12,6 +12,7 @@ def make_user_report(date, directory="", pkl_file="users.pkl"):
 
     font = openpyxl.styles.Font(name='Times New Roman')
     fontb = openpyxl.styles.Font(name='Times New Roman', bold=True)
+
     def add_cell(sheet, row, col, val, font=font):
         cell = sheet.cell(row=row, column=col)
         cell.value = val

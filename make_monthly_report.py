@@ -11,6 +11,8 @@ import time
 import argparse
 from dateutil import relativedelta
 
+from utils import parse_date, set_verbosity
+
 
 # -- Running functions which collect all usage data over the last NUM_MONTHS starting from THIS_MONTH ----- #
 # -- Automatically detects if data exists in the SQL database and uses it if so --------------------------- #

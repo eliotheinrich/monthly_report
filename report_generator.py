@@ -1,12 +1,10 @@
 import datetime
 import re
 
-import pandas as pd
 import numpy as np
-import pickle as pkl
+import dill as pkl
 
-import accounting_utils
-from accounting_utils import *
+from utils import capture, parse_time, parse_mem, parse_storage
 
 GROUP_PKL = "groups.pkl"
 USERS_PKL = "users.pkl"
@@ -14,65 +12,6 @@ groups_data = pkl.load(open(GROUP_PKL, "rb"))
 
 SACCT_USAGE_KEYS = ['cpuUsage', 'gpuUsage', 'reqMem', 'allocMem']
 GROUPS = list(groups_data["gid"])
-
-
-# Parses a date string in the format 2023-01-01 to a datetime object
-def parse_date(date: str) -> datetime:
-    date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
-    date = remove_day(date)
-    return date
-
-
-def remove_day(date) -> datetime:
-    if isinstance(date, str):
-        date = parse_date(date)
-    date = date.replace(day=1)
-    return date
-
-
-# Converts elapsed time returned by sacct to hours
-def parse_time(time: str) -> int:
-    if '-' in time:
-        ind = time.index('-')
-        days = int(time[0:ind])
-        return 24*days + parse_time(time[ind+1:])
-
-    hrs, mins, secs = [int(i) for i in time.split(':')]
-
-    return secs/3600 + mins/60 + hrs
-
-
-mem_pattern = re.compile(r'([0-9.]+)([a-zA-Z]+)')
-
-
-# Parses memory output of sacct to produce the gigabytes used
-def parse_mem(mem: str, ncores: int, nodes: int) -> int:
-    matches = mem_pattern.match(mem)
-    num = matches.group(1)
-    info = matches.group(2)
-
-    if float(num) == 0.0:
-        return 0.0
-
-    if info[0] == 'G':
-        gigabytes = float(mem[:-2])
-    elif info[0] == 'M':
-        gigabytes = float(mem[:-2])/1000
-    else:
-        raise ValueError
-
-    if info[1] == 'n':
-        gigabytes *= int(nodes)
-    elif info[1] == 'c':
-        gigabytes *= int(ncores)
-
-    return gigabytes
-
-
-# Converts elapsed time and number of cpus to CPU hours
-def get_usage_time(elapsed: str, ncpu: str) -> int:
-    time = parse_time(elapsed)
-    return time*int(ncpu)
 
 
 class Report:
@@ -126,37 +65,11 @@ class Report:
 
         return usage
 
-    def sql_insert(self, table):
-        query_result = read_sql_query(f'DESCRIBE {table};')
-        columns = [q[0] for q in query_result]
-        for i in range(self.num_months):
-            report = self.reports[i]
-            month = self.months[i]
-            for gid in report.groups():
-                query = f'SELECT * from {table} WHERE gid="{gid}" AND day="{month}"'
-                query_result = read_sql_query(query)
-                if len(query_result) == 0:
-                    # Insert new entry
-                    keys = [key for key in columns if key in report.keys()]
-                    vals = [str(report.query(key, gid)) for key in keys]
-                    if keys:
-                        query = f'INSERT INTO {table} (gid, day, {", ".join(keys)}) VALUES ("{gid}", "{month}", {", ".join(vals)});'
-                        execute_sql_query(query)
-                else:
-                    # Update existing entry
-                    query_result = query_result[0]
-                    keys = [key for n, key in enumerate(columns) if key in report.keys() and query_result[n] is None]
-                    vals = [report.query(key, gid) for key in keys]
-                    if keys:
-                        query = f'UPDATE {table} SET {", ".join([f"{key} = {val}" for key,val in zip(keys, vals)])} WHERE uid = "{gid}" AND day = "{month}";'
-                        execute_sql_query(query)
-
-
 class MonthlyReport:
     def __init__(self, report_generators):
         self.usage = {}
         for report_generator in report_generators:
-            for key,item in report_generator().items():
+            for key, item in report_generator().items():
                 self.usage[key] = item
 
     def keys(self):
@@ -236,7 +149,6 @@ class SREPORTGenerator:
             mem = int(result[1])/60/1024
             gpu = int(result[2])/60
 
-
         usage = {"cpuUsage": cpu, "reqMem": mem, "allocMem": mem, "gpuUsage": gpu}
         return usage
 
@@ -295,7 +207,7 @@ class SACCTReportGenerator:
                 print(f"getting usage for {gid} from pkl file")
                 user_usage = self.get_user_usage_pkl(gid)
             else:
-                print(f"getting usage for {gid} from sacct file")
+                print(f"getting usage for {gid} from sacct")
                 user_usage = self.get_user_usage_sacct(gid)
                 # Store new data
                 if gid not in self.pkl_data:
@@ -311,7 +223,6 @@ class SACCTReportGenerator:
             pkl.dump(self.pkl_data, f)
 
         return usage
-
 
     # Converts the lines corresponding to a unique job to usage statistics
     @staticmethod
@@ -406,7 +317,6 @@ class SACCTReportGenerator:
                 pass
             else:
                 key = 'misc'
-                #print(f'{gid} is not an identified group.')
 
             key = gid if gid in GROUPS else 'misc'
             usage[key]['cpuUsage'] += job_cpu_usage
@@ -450,24 +360,16 @@ class SACCTReportGenerator:
     def state_valid(state: str) -> bool:
         return not (state == 'PENDING' or state == 'RUNNING' or state == 'FAILED' or 'CANCELLED' in state)
 
-    # Using existed data in the SQL table, gets group's usage in a given month (the day passed in month is discarded)
-    def get_user_usage_sql(self, gid: str):
-        keys = ', '.join(SACCT_USAGE_KEYS)
-        query = f'SELECT {keys} FROM {self.table} WHERE day = \"{self.start_date}\" AND gid = \"{gid}\";'
-        query_result = read_sql_query(query)
-        usage = {SACCT_USAGE_KEYS[i]: query_result[0][i] for i in range(len(SACCT_USAGE_KEYS))}
-        return usage
-
     def get_user_usage_pkl(self, gid: str):
         gid_usage = self.pkl_data[gid][self.start_date]
         return gid_usage
 
     def month_has_data_pkl(self, gid: str) -> bool:
-        if not gid in self.pkl_data:
+        if gid not in self.pkl_data:
             print(f"{gid} not found")
             return False
 
-        if not self.start_date in self.pkl_data[gid]:
+        if self.start_date not in self.pkl_data[gid]:
             print(f"{self.start_date} for {gid} not found")
             return False
 
@@ -482,21 +384,6 @@ class SACCTReportGenerator:
                 return False
 
         return True
-
-    # Checks if the database has an entry for a given group and month
-    def month_has_data_sql(self, gid: str) -> bool:
-        if remove_day(self.start_date) != remove_day(self.end_date):
-            return False
-
-        sacct_keys = ', '.join(SACCT_USAGE_KEYS)
-        query_result = read_sql_query(f'SELECT {sacct_keys} FROM {self.table} WHERE day = \"{remove_day(self.start_date)}\" AND gid = \"{gid}\";')
-        if len(query_result) == 0:
-            return False
-        elif len(query_result) == 1:
-            # If any of the sacct usage statistics are None, then re-query.
-            return not any(map(lambda x: x is None, query_result[0]))
-        else:
-            raise ValueError(f"Duplicate entry found for {gid} at {self.start_date} in {self.table}. Delete any duplicates.")
 
     # Using sacct, gets group's usage in a given month (the day passed in month is discarded)
     def get_user_usage_sacct(self, gid: str):
@@ -574,7 +461,7 @@ class StorageReportGenerator:
     def categorize_storage(user_storage):
         storage = {}
 
-        for id,s in user_storage.items():
+        for id, s in user_storage.items():
             if id in USER_GROUPS:
                 key = USER_GROUPS[id]
             elif id == "snapshots":
@@ -595,7 +482,10 @@ class StorageReportGenerator:
         result = read_sql_query(query)
         return len(result) != 0
 
+
 SNAPSHOT_REPORT = '/data/usage/snapshots'
+
+
 def snapshot_callback(storage):
     # Add snapshots
     if 'dataStorage' in storage:
@@ -619,7 +509,7 @@ def snapshot_callback(storage):
         for gid in storage[key]:
             if gid.isnumeric():
                 keys_to_delete.append(gid)
-            
+
         for to_del in keys_to_delete:
             if to_del in storage[key]:
                 val = storage[key][to_del]
@@ -627,7 +517,5 @@ def snapshot_callback(storage):
 
                 if 'misc' not in storage[key]:
                     storage[key]['misc'] = 0.0
-                
-                storage[key]['misc'] += val
-                
 
+                storage[key]['misc'] += val

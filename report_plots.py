@@ -1,7 +1,6 @@
 # -- Generates usage plots for report -- #
 
-from accounting_utils import *
-from report_generator import GROUPS, SACCT_USAGE_KEYS
+from report_generator import GROUPS
 from report_generator import groups_data
 
 import matplotlib.pyplot as plt
