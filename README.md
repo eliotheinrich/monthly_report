@@ -10,7 +10,7 @@ cd monthly_report
 module load miniconda3/miniconda
 conda create -n monthly_report python=3.10
 conda activate monthly_report
-pip install requirements.txt
+pip install -r requirements.txt
 
 python make_monthly_report.py 2024-11-01 --num-months 13 --directory "October_Report" --output-extension png
 ```
