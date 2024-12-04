@@ -1,15 +1,16 @@
 import dill as pkl
 import pandas as pd
+import os
 
 from utils import capture
 
-def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
+def update_users(groups_filename, users_filename):
     unknown_ngids = set()
 
-    with open(groups_pkl_file, "rb") as f:
+    with open(groups_filename, "rb") as f:
         groups = pkl.load(f)
 
-    with open(users_pkl_file, "rb") as f:
+    with open(users_filename, "rb") as f:
         users = pkl.load(f)
 
     def user_exists(uid):
@@ -108,8 +109,11 @@ def update_users(groups_pkl_file="groups.pkl", users_pkl_file="users.pkl"):
         else:
             add_user(user_info)
 
-    with open(users_pkl_file, "wb") as f:
+    with open(users_filename, "wb") as f:
         pkl.dump(users, f)
 
 if __name__ == "__main__":
-    update_users()
+    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    users_filename = os.path.join(data_path, "users.pkl")
+    groups_filename = os.path.join(data_path, "groups.pkl")
+    update_users(groups_filename, users_filename)

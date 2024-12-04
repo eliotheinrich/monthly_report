@@ -1,9 +1,10 @@
 import dill as pkl
 import pandas as pd
+import os
 
 import argparse
 
-def remove_group(gid):
+def remove_group(users_filename, gid):
     print(f'Deleting {gid}. ')
 
     s = ''
@@ -19,7 +20,7 @@ def remove_group(gid):
 
     # Check if group already exists before proceeding
 
-    with open("users.pkl", "rb") as f:
+    with open(users_filename, "rb") as f:
         groups = pkl.load(f)
 
     if not (groups['gid'] == gid).any():
@@ -27,7 +28,7 @@ def remove_group(gid):
     else:
         groups = groups[groups.gid != gid]
 
-        with open("users.pkl", "wb") as f:
+        with open(users_filename, "wb") as f:
             pkl.dump(groups, f)
 
 if __name__ == "__main__":
@@ -38,4 +39,6 @@ if __name__ == "__main__":
 
     gid = args.gid
 
-    remove_group(gid)
+    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    users_filename = os.path.join(data_path, "users.pkl")
+    remove_group(users_filename, gid)

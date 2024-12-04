@@ -21,8 +21,6 @@ from utils import parse_date, set_verbosity
 # Generate report for the NUM_MONTHS preceeding THIS_MONTH
 # I.e. if NUM_MONTHS = 13 and THIS_MONTH = "2023-05-01", collects usage data for the period between Apr 2022 and Apr 2023.
 
-
-
 # Parsing command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument("date")
@@ -58,7 +56,7 @@ if OUTPUT_FILES:
     print(f'Generating output files: {OUTPUT_FILES}. File format: .{OUTPUT_EXTENSION}')
 else:
     print(f'Generating output files: {OUTPUT_FILES}.')
-    
+
 print(f'Inserting new data into database: {INSERT}')
 
 if DIRECTORY is not None:
@@ -70,9 +68,14 @@ if DIRECTORY is not None:
 months = [THIS_MONTH - relativedelta.relativedelta(months=i+1) for i in range(NUM_MONTHS)]
 monthly_reports = []
 
+data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+usage_filename = os.path.join(data_path, "usage.pkl")
+users_filename = os.path.join(data_path, "users.pkl")
+groups_filename = os.path.join(data_path, "groups.pkl")
+
 t0 = time.time()
 for n,month in enumerate(months):
-    report_generators = [SACCTReportGenerator(month, pkl_file='usage.pkl')]
+    report_generators = [SACCTReportGenerator(month, pkl_file=usage_filename)]
     if n == 0:
         storage_reports = {'dataStorage': DATA_REPORT, 'scratchStorage': SCRATCH_REPORT}
         if ISILON_PATH is not None:
@@ -160,10 +163,9 @@ plot_yearly_usage(sum_usage['reqMem'], months=report.months, alloc=sum_usage['al
 
 make_report_sheet(report, directory=DIRECTORY)
 
-users_pkl_file = "users.pkl"
-groups_pkl_file = "groups.pkl"
-update_users(users_pkl_file=users_pkl_file, groups_pkl_file=groups_pkl_file)
-make_user_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=users_pkl_file)
-make_group_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=groups_pkl_file)
+
+update_users(users_filename=users_filename, groups_filename=groups_filename)
+make_user_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=users_filename)
+make_group_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=groups_filename)
 
 

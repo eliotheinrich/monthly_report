@@ -1,26 +1,42 @@
 import dill as pkl
 import pandas as pd
+import os
 
 import argparse
 
-parser = argparse.ArgumentParser()
+def add_group(groups_filename, gid, ngid, first_name, last_name, email, dept):
+    # Check if group already exists before proceeding
 
-parser.add_argument("gid")
-parser.add_argument("ngid")
-parser.add_argument("firstName")
-parser.add_argument("lastName")
-parser.add_argument("email")
-parser.add_argument("department")
-args = parser.parse_args()
+    with open(groups_filename, "rb") as f:
+        groups = pkl.load(f)
 
-gid = args.gid
-ngid = args.ngid
-first_name = args.firstName
-last_name = args.lastName
-email = args.email
-dept = args.department
+    if (groups['gid'] == gid).any():
+        print(f'User {gid} already exists; skipping.')
+    else:
+        groups = pd.concat([groups, pd.DataFrame([[gid, last_name, first_name, email, dept, ngid]], columns=groups.columns)], ignore_index=True)
+        groups = groups.sort_values("gid")
 
-def add_group():
+        with open(groups_filename, "wb") as f:
+            pkl.dump(groups, f)
+
+def parse_arguments():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("gid")
+    parser.add_argument("ngid")
+    parser.add_argument("firstName")
+    parser.add_argument("lastName")
+    parser.add_argument("email")
+    parser.add_argument("department")
+    args = parser.parse_args()
+
+    gid = args.gid
+    ngid = args.ngid
+    first_name = args.firstName
+    last_name = args.lastName
+    email = args.email
+    dept = args.department
+
     print('You entered ')
     print(f'gid: {gid}')
     print(f'ngid: {ngid}')
@@ -40,19 +56,10 @@ def add_group():
         else:
             print('Please enter either y or n.')
 
-    # Check if group already exists before proceeding
+    return gid, ngid, first_name, last_name, email, dept
 
-    with open("groups.pkl", "rb") as f:
-        groups = pkl.load(f)
-
-    if (groups['gid'] == gid).any():
-        print(f'User {gid} already exists; skipping.')
-    else:
-        groups = pd.concat([groups, pd.DataFrame([[gid, last_name, first_name, email, dept, ngid]], columns=groups.columns)], ignore_index=True)
-        groups = groups.sort_values("gid")
-
-        with open("groups.pkl", "wb") as f:
-            pkl.dump(groups, f)
 
 if __name__ == "__main__":
-    add_group()
+    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    groups_filename = os.path.join(data_path, "groups.pkl")
+    add_group(groups_filename, *parse_arguments())

@@ -1,13 +1,16 @@
 import datetime
 import re
+import os
 
 import numpy as np
 import dill as pkl
 
 from utils import capture, parse_time, parse_mem, parse_storage
 
-GROUP_PKL = "groups.pkl"
-USERS_PKL = "users.pkl"
+data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+GROUP_PKL = os.path.join(data_path, "groups.pkl")
+USERS_PKL = os.path.join(data_path, "users.pkl")
+
 groups_data = pkl.load(open(GROUP_PKL, "rb"))
 
 SACCT_USAGE_KEYS = ['cpuUsage', 'gpuUsage', 'reqMem', 'allocMem']

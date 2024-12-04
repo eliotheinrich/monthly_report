@@ -4,7 +4,7 @@ import os
 from openpyxl.utils import get_column_letter
 
 
-def make_user_report(date, directory="", pkl_file="users.pkl"):
+def make_user_report(date, directory, pkl_file):
     with open(pkl_file, "rb") as f:
         users = pkl.load(f)
 
@@ -54,4 +54,7 @@ if __name__ == "__main__":
     from datetime import date
     now = data.today()
 
-    make_user_report(now.strftime('%b%Y'))
+    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    users_filename = os.path.join(data_path, "users.pkl")
+
+    make_user_report(now.strftime('%b%Y'), directory=os.getcwd(), pkl_file=users_filename)

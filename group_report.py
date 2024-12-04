@@ -3,7 +3,7 @@ from openpyxl.utils import get_column_letter
 import os
 import dill as pkl
 
-def make_group_report(date, directory="", pkl_file="groups.pkl"):
+def make_group_report(date, directory, pkl_file):
     with open(pkl_file, "rb") as f:
         groups = pkl.load(f)
 
@@ -49,6 +49,8 @@ def make_group_report(date, directory="", pkl_file="groups.pkl"):
 
 if __name__ == "__main__":
     from datetime import date
-    now = data.today()
+    now = date.today()
 
-    make_group_report(now.strftime('%b%Y'))
+    data_path = os.getenv("DATA_REPORT_PATH", os.getcwd())
+    groups_filename = os.path.join(data_path, "groups.pkl")
+    make_group_report(now.strftime('%b%Y'), directory=os.getcwd(), pkl_file=groups_filename)
