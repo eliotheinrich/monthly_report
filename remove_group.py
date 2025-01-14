@@ -4,7 +4,9 @@ import os
 
 import argparse
 
-def remove_group(groups_filename, gid):
+from add_group import load_groups, save_groups
+
+def remove_group(gid):
     print(f'Deleting {gid}. ')
 
     s = ''
@@ -18,17 +20,15 @@ def remove_group(groups_filename, gid):
         else:
             print('Please enter either y or n.')
 
-    # Check if group already exists before proceeding
-    with open(groups_filename, "rb") as f:
-        groups = pkl.load(f)
+    groups = load_groups(group_filename)
 
+    # Check if group already exists before proceeding
     if not (groups['gid'] == gid).any():
         print(f'User {gid} does not exist.')
     else:
         groups = groups[groups.gid != gid]
 
-        with open(groups_filename, "wb") as f:
-            pkl.dump(groups, f)
+        save_groups(groups)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,6 +38,4 @@ if __name__ == "__main__":
 
     gid = args.gid
 
-    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-    groups_filename = os.path.join(data_path, "groups.pkl")
-    remove_group(groups_filename, gid)
+    remove_group(gid)

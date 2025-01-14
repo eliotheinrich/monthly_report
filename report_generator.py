@@ -7,15 +7,14 @@ import dill as pkl
 
 from utils import capture, parse_time, parse_mem, parse_storage
 
-data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-GROUP_PKL = os.path.join(data_path, "groups.pkl")
-USERS_PKL = os.path.join(data_path, "users.pkl")
+from load_data import load_groups, load_users, load_usage,
+                      save_groups, save_users, save_usage
 
-groups_data = pkl.load(open(GROUP_PKL, "rb"))
+groups = load_groups()
+users = load_users()
 
 SACCT_USAGE_KEYS = ['cpuUsage', 'gpuUsage', 'reqMem', 'allocMem']
-GROUPS = list(groups_data["gid"])
-
+GROUPS = list(groups["gid"])
 
 class Report:
     def __init__(self, months, monthly_reports):
@@ -92,90 +91,87 @@ class MonthlyReport:
 
 
 SACCT_USAGE_KEYS = ['cpuUsage', 'gpuUsage', 'reqMem', 'allocMem']
-class SREPORTGenerator:
-    def __init__(self, start_date: datetime, end_date: datetime = None, pkl_file: str = 'usage.pkl'):
-        self.start_date = start_date
-        self.end_date = end_date
-        if end_date is None:
-            self.end_date = start_date.replace(day=28) + datetime.timedelta(days=4)
-            self.end_date -= datetime.timedelta(days=self.end_date.day)
-
-        self.start_date = str(self.start_date)
-        self.end_date = str(self.end_date)
-
-        self.pkl_filename = pkl_file
-        try:
-            self.pkl_data = pkl.load(open(pkl_file, "rb"))
-        except EOFError:
-            self.pkl_data = {}
-
-    def __call__(self):
-        usage = {key: {} for key in SACCT_USAGE_KEYS}
-        for gid in GROUPS:
-            if gid not in self.pkl_data:
-                self.pkl_data[gid] = {}
-
-            if self.month_has_data(gid):
-                print(f"getting data for {gid} from pkl file")
-                user_usage = self.get_user_usage_pkl(gid)
-            else:
-                print(f"getting for {gid} from sreport")
-                user_usage = self.get_user_usage_sreport(gid)
-                # Store new data
-                self.pkl_data[gid][self.start_date] = user_usage
-
-            for usage_key in SACCT_USAGE_KEYS:
-                usage[usage_key][gid] = user_usage[usage_key]
-
-        # Serialize data
-        with open(self.pkl_filename, "wb") as f:
-            print(f"dumping to {self.pkl_filename}")
-            pkl.dump(self.pkl_data, f)
-
-        return usage
-
-    def get_user_usage_pkl(self, gid: str):
-        gid_usage = self.pkl_data[gid][self.start_date]
-        return gid_usage
-
-    def get_user_usage_sreport(self, gid: str):
-        cmd = f"sreport cluster AccountUtilizationByUser Accounts={gid} -T cpu,mem,gres/gpu start={self.start_date} end={self.end_date} | awk 'NR > 6 {{print $NF}}'"
-        print(cmd)
-        result = capture(cmd).split("\n")[:-1]
-
-        if not result:
-            cpu = 0.0
-            mem = 0.0
-            gpu = 0.0
-        else:
-            cpu = int(result[0])/60
-            mem = int(result[1])/60/1024
-            gpu = int(result[2])/60
-
-        usage = {"cpuUsage": cpu, "reqMem": mem, "allocMem": mem, "gpuUsage": gpu}
-        return usage
-
-    # Checks if the database has an entry for a given group and month
-    def month_has_data(self, gid: str) -> bool:
-        if gid not in self.pkl_data:
-            print(f"{gid} not found")
-            return False
-
-        if self.start_date not in self.pkl_data[gid]:
-            print(f"{self.start_date} for {gid} not found")
-            return False
-
-        gid_usage = self.pkl_data[gid][self.start_date]
-        if len(gid_usage) == 0:
-            print(f"len() = 0 for {gid}")
-            return False
-
-        for key in SACCT_USAGE_KEYS:
-            if np.isnan(gid_usage[key]):
-                print("Found invalid val")
-                return False
-
-        return True
+#class SREPORTGenerator:
+#    def __init__(self, start_date: datetime, end_date: datetime = None, pkl_file: str = 'usage.pkl'):
+#        self.start_date = start_date
+#        self.end_date = end_date
+#        if end_date is None:
+#            self.end_date = start_date.replace(day=28) + datetime.timedelta(days=4)
+#            self.end_date -= datetime.timedelta(days=self.end_date.day)
+#
+#        self.start_date = str(self.start_date)
+#        self.end_date = str(self.end_date)
+#
+#        self.pkl_filename = pkl_file
+#        self.pkl_data = load_usage()
+#
+#    def __call__(self):
+#        usage = {key: {} for key in SACCT_USAGE_KEYS}
+#        for gid in GROUPS:
+#            if gid not in self.pkl_data:
+#                self.pkl_data[gid] = {}
+#
+#            if self.month_has_data(gid):
+#                print(f"getting data for {gid} from pkl file")
+#                user_usage = self.get_user_usage_pkl(gid)
+#            else:
+#                print(f"getting for {gid} from sreport")
+#                user_usage = self.get_user_usage_sreport(gid)
+#                # Store new data
+#                self.pkl_data[gid][self.start_date] = user_usage
+#
+#            for usage_key in SACCT_USAGE_KEYS:
+#                usage[usage_key][gid] = user_usage[usage_key]
+#
+#        # Serialize data
+#        with open(self.pkl_filename, "wb") as f:
+#            print(f"dumping to {self.pkl_filename}")
+#            pkl.dump(self.pkl_data, f)
+#
+#        return usage
+#
+#    def get_user_usage_pkl(self, gid: str):
+#        gid_usage = self.pkl_data[gid][self.start_date]
+#        return gid_usage
+#
+#    def get_user_usage_sreport(self, gid: str):
+#        cmd = f"sreport cluster AccountUtilizationByUser Accounts={gid} -T cpu,mem,gres/gpu start={self.start_date} end={self.end_date} | awk 'NR > 6 {{print $NF}}'"
+#        print(cmd)
+#        result = capture(cmd).split("\n")[:-1]
+#
+#        if not result:
+#            cpu = 0.0
+#            mem = 0.0
+#            gpu = 0.0
+#        else:
+#            cpu = int(result[0])/60
+#            mem = int(result[1])/60/1024
+#            gpu = int(result[2])/60
+#
+#        usage = {"cpuUsage": cpu, "reqMem": mem, "allocMem": mem, "gpuUsage": gpu}
+#        return usage
+#
+#    # Checks if the database has an entry for a given group and month
+#    def month_has_data(self, gid: str) -> bool:
+#        if gid not in self.pkl_data:
+#            print(f"{gid} not found")
+#            return False
+#
+#        if self.start_date not in self.pkl_data[gid]:
+#            print(f"{self.start_date} for {gid} not found")
+#            return False
+#
+#        gid_usage = self.pkl_data[gid][self.start_date]
+#        if len(gid_usage) == 0:
+#            print(f"len() = 0 for {gid}")
+#            return False
+#
+#        for key in SACCT_USAGE_KEYS:
+#            if np.isnan(gid_usage[key]):
+#                print("Found invalid val")
+#                return False
+#
+#        return True
 
 
 class SACCTReportGenerator:
@@ -183,7 +179,7 @@ class SACCTReportGenerator:
     SACCT_FORMAT_FIELDS = ['JobID', 'User', 'Group', 'State', 'Elapsed', 'NCPUS', 'Partition', 'ReqMem', 'ReqNodes', 'MaxRSS', 'AllocTres']
     SACCT_FORMAT = ','.join([f"{key}%{ind}" for key, ind in zip(SACCT_FORMAT_FIELDS, SACCT_FORMAT_WIDTHS)])
 
-    def __init__(self, start_date: datetime, end_date: datetime = None, pkl_file: str = 'usage.pkl'):
+    def __init__(self, start_date: datetime, end_date: datetime = None):
         self.start_date = start_date
         self.end_date = end_date
         if end_date is None:
@@ -194,11 +190,7 @@ class SACCTReportGenerator:
         self.end_date = str(self.end_date)
 
         self.pkl_filename = pkl_file
-        try:
-            self.pkl_data = pkl.load(open(pkl_file, "rb"))
-            print(f"Loading {pkl_file}")
-        except EOFError:
-            self.pkl_data = {}
+        self.pkl_data = load_usage()
 
         self.SACCT_QUERY_RESULT = None
         self.SACCT_MONTH = None
@@ -221,9 +213,7 @@ class SACCTReportGenerator:
                 usage[usage_key][gid] = user_usage[usage_key]
 
         # Serialize data
-        with open(self.pkl_filename, "wb") as f:
-            print(f"dumping to {self.pkl_filename}")
-            pkl.dump(self.pkl_data, f)
+        save_usage(self.pkl_data)
 
         return usage
 

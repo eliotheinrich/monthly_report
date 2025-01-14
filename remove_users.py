@@ -4,8 +4,10 @@ import os
 
 import argparse
 
-def remove_group(users_filename, gid):
-    print(f'Deleting {gid}. ')
+from add_users import load_users, save_users
+
+def remove_user(uid):
+    print(f'Deleting {uid}. ')
 
     s = ''
     while s not in ['y', 'Y', 'n', 'N']: 
@@ -18,27 +20,22 @@ def remove_group(users_filename, gid):
         else:
             print('Please enter either y or n.')
 
+    users = load_users()
+
     # Check if group already exists before proceeding
-
-    with open(users_filename, "rb") as f:
-        groups = pkl.load(f)
-
-    if not (groups['gid'] == gid).any():
-        print(f'User {gid} does not exist.')
+    if not (users['uid'] == uid).any():
+        print(f'User {uid} does not exist.')
     else:
-        groups = groups[groups.gid != gid]
+        users = users[users.uid != uid]
 
-        with open(users_filename, "wb") as f:
-            pkl.dump(groups, f)
+        save_users(users)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("gid")
+    parser.add_argument("uid")
     args = parser.parse_args()
 
-    gid = args.gid
+    uid = args.uid
 
-    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-    users_filename = os.path.join(data_path, "users.pkl")
-    remove_group(users_filename, gid)
+    remove_user(uid)

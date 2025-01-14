@@ -3,9 +3,10 @@ from openpyxl.utils import get_column_letter
 import os
 import dill as pkl
 
+from add_group import load_groups
+
 def make_group_report(date, directory, pkl_file):
-    with open(pkl_file, "rb") as f:
-        groups = pkl.load(f)
+    groups = load_groups(pkl_file)
 
     wb_name = os.path.join(directory, f"PIList-{date}.xlsx")
 

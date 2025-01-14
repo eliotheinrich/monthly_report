@@ -1,119 +1,85 @@
 import dill as pkl
 import pandas as pd
 import os
+import argparse
 
 from utils import capture
 
-def update_users(groups_filename, users_filename):
+from load_data import load_groups, load_users, save_users
+
+
+def user_exists(uid: str):
+    s = capture(f'getent passwd {uid}').strip()
+    return s != ''
+
+
+def get_name(uid: str):
+    s = capture(f'getent passwd {uid}').strip()
+    name = s.split(':')[4]
+    first_name = name.split()[0]
+    last_name = name.split()[-1]
+
+    return {'first_name': first_name, 'last_name': last_name}
+
+
+def get_nuid(uid: str):
+    return capture(f'id -u {uid}').strip()
+
+
+def get_email(uid: str):
+    return uid + '@bc.edu'
+
+
+def update_users(verbose: bool):
     unknown_ngids = set()
 
-    with open(groups_filename, "rb") as f:
-        groups = pkl.load(f)
+    groups = load_groups()
+    users = load_users()
 
-    with open(users_filename, "rb") as f:
-        users = pkl.load(f)
+    sacctmgr_output = capture('sacctmgr list user -Pn').strip().split('\n')
+    andromeda_users = []
+    for line in sacctmgr_output:
+        uid, acct, _ = line.split('|')
+        if not (users['uid'] == uid).any():
+            if user_exists(uid):
+                new_user = {'uid': uid, 'acct': acct, 'nuid': get_nuid(uid), 'email': get_email(uid), **get_name(uid)}
+                andromeda_users.append(new_user)
+            else:
+                if verbose:
+                    print(f"User {uid} exists in slurmdb but not posix permissions.")
 
-    def user_exists(uid):
-        s = capture(f'getent passwd {uid}')
-        return s != ''
-
-    def get_name(uid):
-        s = capture(f'getent passwd {uid}')
-        name = s.split(':')[4]
-        first_name = name.split()[0]
-        last_name = name.split()[-1]
-
-        return {'first_name': first_name, 'last_name': last_name}
-
-    def gid_lookup(ngid):
-        nonlocal groups
-        query_result = groups.loc[groups['ngid'] == ngid]
-        if len(query_result) > 0:
-            print(f'{ngid} has group {query_result}')
-            return query_result.iloc[0]['gid']
-        else:
-            print(f'{ngid} cannot be identified.')
-            return None
-
-    def get_id(uid):
-        nuid = capture('id -u ' + uid).strip()
-        ngid = capture('id -g ' + uid).strip()
-        gid_output = capture('id -gn ' + uid).strip().split('\n')
-        if len(gid_output) == 2:
-            print(f'Looking up {uid} with ngid {ngid}')
-            ngid = gid_output[1]
-            gid = gid_lookup(ngid)
-            if gid is None:
-                print(f'Could not find group corresponding to gid {ngid}')
-                unknown_ngids.add(ngid)
-
-        elif len(gid_output) == 1:
-            gid = gid_output[0]
-
-        return {'nuid': nuid, 'ngid': ngid, 'gid': gid}
-
-    def get_email(uid):
-        return {'email': uid + '@bc.edu'}
-
-    def get_user_info(uid):
-        t = {'uid': uid}
-        return {**t, **get_name(uid), **get_id(uid), **get_email(uid)}
-
-    # Collect user information from Andromeda based on the contents of /data/
-    # Some users (sysadmins, test accounts, etc) are filtered
-
-    uids = capture('ls /data/').split()
-    uids = [user.strip().replace('/', '') for user in uids]
-    ignore_uids = ['admin', 'swadmin', 'jem', 'parif', 'dilascij', 'salazajg']
-    ignore_gids = ['fmp']
-
-    andromeda_users = {}
-    for uid in uids:
-        if user_exists(uid) and uid not in ignore_uids:
-            id = get_id(uid)
-            if id['gid'] not in ignore_gids:
-                andromeda_users[uid] = get_user_info(uid)
-                continue
-
-        ignore_uids.append(uid)
 
     # Updating userInfo
-    n = 0
     def add_user(user_info):
         nonlocal users
-        nonlocal n
         uid = user_info['uid']
 
         # Check if user already exists before proceeding
         if (users['uid'] == uid).any():
             return
         else:
-            print(f"({n}) Adding {uid}")
-            n += 1
+            if verbose:
+                print(f"Adding {uid}")
 
-        gid = user_info['gid']
+        acct = user_info['acct']
         nuid = user_info['nuid']
         first_name = user_info['first_name']
         last_name = user_info['last_name']
         email = user_info['email']
-        bc = 'y'
-        active = 'y'
 
-        users = pd.concat([users, pd.DataFrame([[uid, gid, nuid, first_name, last_name, email, bc, active]], columns=users.columns)], ignore_index=True)
+        users = pd.concat([users, pd.DataFrame([[uid, acct, nuid, first_name, last_name, email]], columns=users.columns)], ignore_index=True)
         users = users.sort_values("uid")
 
-    for uid, user_info in andromeda_users.items():
-        ngid = user_info['ngid']
-        if ngid in unknown_ngids:
-            print(f"Don't know what to do with {uid}")
-        else:
-            add_user(user_info)
 
-    with open(users_filename, "wb") as f:
-        pkl.dump(users, f)
+    for user_info in andromeda_users:
+        add_user(user_info)
+
+    save_users(users)
 
 if __name__ == "__main__":
-    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-    users_filename = os.path.join(data_path, "users.pkl")
-    groups_filename = os.path.join(data_path, "groups.pkl")
-    update_users(groups_filename, users_filename)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", action="store_true")
+    args = parser.parse_args()
+    verbose = args.verbose
+
+    update_users(verbose)

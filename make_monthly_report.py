@@ -38,16 +38,16 @@ INSERT = args.insert
 OUTPUT_FILES = args.output_files
 OUTPUT_EXTENSION = args.output_extension[0]
 NUM_MONTHS = int(args.num_months[0])
-ISILON_PATH = args.isilon_report_path[0]
 THIS_MONTH = parse_date(args.date)
 FIRST_MONTH = THIS_MONTH - relativedelta.relativedelta(months=NUM_MONTHS)
 VERBOSITY = args.verbose
-GROUP_STORAGE_BY_GROUP = args.user
 DIRECTORY = args.directory
 
 set_verbosity(VERBOSITY)
 
 
+# TODO get storage usage from /m31/reps/wekafs.qta
+STORAGE_QUOTA = '/m31/reps/wekafs.qta'
 SCRATCH_REPORT = '/scratch/usage/scratch_report'
 DATA_REPORT = '/data/usage/data_report'
 
@@ -68,22 +68,11 @@ if DIRECTORY is not None:
 months = [THIS_MONTH - relativedelta.relativedelta(months=i+1) for i in range(NUM_MONTHS)]
 monthly_reports = []
 
-data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-usage_filename = os.path.join(data_path, "usage.pkl")
-users_filename = os.path.join(data_path, "users.pkl")
-groups_filename = os.path.join(data_path, "groups.pkl")
-
 t0 = time.time()
 for n,month in enumerate(months):
-    report_generators = [SACCTReportGenerator(month, pkl_file=usage_filename)]
+    report_generators = [SACCTReportGenerator(month)]
     if n == 0:
-        storage_reports = {'dataStorage': DATA_REPORT, 'scratchStorage': SCRATCH_REPORT}
-        if ISILON_PATH is not None:
-            storage_reports['isilonAndromedaStorage'] = os.path.join(ISILON_PATH, 'isilon_andromeda_report')
-            storage_reports['isilonSiriusStorage'] = os.path.join(ISILON_PATH, 'isilon_sirius_report')
-            storage_reports['isilonStorage'] = os.path.join(ISILON_PATH, 'isilon_report')
-
-        storage_report_generator = StorageReportGenerator(storage_reports, callback=snapshot_callback)
+        storage_report_generator = StorageReportGenerator(STORAGE_REPORT, callback=snapshot_callback)
         report_generators.append(storage_report_generator)
 
     monthly_report = MonthlyReport(report_generators)
@@ -105,11 +94,6 @@ sum_usage = report.get_sum_usage()
 data_storage = report.query('dataStorage', idx=-1)
 scratch_storage = report.query('scratchStorage', idx=-1)
 
-if ISILON_PATH is not None:
-    isilon_andromeda_storage = report.query('isilonAndromedaStorage', idx=-1)
-    isilon_sirius_storage = report.query('isilonSiriusStorage', idx=-1)
-    isilon_full_storage = report.query('isilonStorage', idx=-1)
-
 total_storage = {}
 for storage in [data_storage, scratch_storage]:
     for id,val in storage.items():
@@ -123,8 +107,8 @@ if not OUTPUT_FILES:
     sys.exit(0)
 
 
+# TODO modify for Andromeda 2 (perhaps collect algorithmically?)
 TOTAL_STORAGE_SPACE = 0.9*1e6 # 900 TB
-TOTAL_ISILON_STORAGE_SPACE = 0.2*1e6 # 200 TB
 
 NUM_48_CORE_NODES = 94
 NUM_48_CORE_GPU_NODES = 3
@@ -137,13 +121,6 @@ gpus = NUM_48_CORE_GPU_NODES*4 + NUM_64_CORE_GPU_NODES*4
 total_mem = (NUM_48_CORE_NODES + NUM_48_CORE_GPU_NODES)*192 + (NUM_64_CORE_NODES + NUM_64_CORE_GPU_NODES)*256
 
 plt.rcParams['font.size'] = 25
-
-if ISILON_PATH is not None:
-    plot_storage_by_group(isilon_andromeda_storage, cutoff=11, title=f'Isilon Andromeda storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-    plot_storage_by_group(isilon_sirius_storage, cutoff=11, title=f'Isilon Sirius storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-    plot_storage_by_group(isilon_full_storage, cutoff=11, title=f'All Isilon storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-    plot_storage_by_group_piechart(isilon_full_storage, cutoff=5, total_storage=TOTAL_ISILON_STORAGE_SPACE, title=f'Isilon total storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-    make_isilon_sheet(report, directory=DIRECTORY)
 
 plot_storage_by_group(data_storage, cutoff=11, title=f'/data/ storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 plot_storage_by_group(scratch_storage, cutoff=11, title=f'/scratch/ storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)

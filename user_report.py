@@ -52,7 +52,7 @@ def make_user_report(date, directory, pkl_file):
 
 if __name__ == "__main__":
     from datetime import date
-    now = data.today()
+    now = date.today()
 
     data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
     users_filename = os.path.join(data_path, "users.pkl")
