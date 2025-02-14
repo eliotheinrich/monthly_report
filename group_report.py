@@ -3,15 +3,13 @@ from openpyxl.utils import get_column_letter
 import os
 import dill as pkl
 
-from add_group import load_groups
+from load_data import Context
 
-def make_group_report(date, directory, pkl_file):
-    groups = load_groups(pkl_file)
-
+def make_group_report(context, date, directory):
     wb_name = os.path.join(directory, f"PIList-{date}.xlsx")
 
-    font = openpyxl.styles.Font(name='Times New Roman')
-    fontb = openpyxl.styles.Font(name='Times New Roman', bold=True)
+    font = openpyxl.styles.Font(name="Times New Roman")
+    fontb = openpyxl.styles.Font(name="Times New Roman", bold=True)
     def add_cell(sheet, row, col, val, font=font):
         cell = sheet.cell(row=row, column=col)
         cell.value = val
@@ -30,7 +28,7 @@ def make_group_report(date, directory, pkl_file):
     for i in range(1, 7):
         sheet.column_dimensions[get_column_letter(i)].width = 20
 
-    for n, group in groups.iterrows():
+    for n, group in context.groups.iterrows():
         n += 2
         gid = group[0]
         last_name = group[1]
@@ -52,6 +50,4 @@ if __name__ == "__main__":
     from datetime import date
     now = date.today()
 
-    data_path = os.getenv("DATA_REPORT_PATH", os.getcwd())
-    groups_filename = os.path.join(data_path, "groups.pkl")
-    make_group_report(now.strftime('%b%Y'), directory=os.getcwd(), pkl_file=groups_filename)
+    make_group_report(now.strftime('%b%Y'), directory=os.getcwd())

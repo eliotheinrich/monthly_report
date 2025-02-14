@@ -3,15 +3,13 @@ import dill as pkl
 import os
 from openpyxl.utils import get_column_letter
 
+from load_data import Context 
 
-def make_user_report(date, directory, pkl_file):
-    with open(pkl_file, "rb") as f:
-        users = pkl.load(f)
-
+def make_user_report(context, date, directory):
     wb_name = os.path.join(directory, f"UserList-{date}.xlsx")
 
-    font = openpyxl.styles.Font(name='Times New Roman')
-    fontb = openpyxl.styles.Font(name='Times New Roman', bold=True)
+    font = openpyxl.styles.Font(name="Times New Roman")
+    fontb = openpyxl.styles.Font(name="Times New Roman", bold=True)
 
     def add_cell(sheet, row, col, val, font=font):
         cell = sheet.cell(row=row, column=col)
@@ -31,7 +29,7 @@ def make_user_report(date, directory, pkl_file):
     for i in range(1, 7):
         sheet.column_dimensions[get_column_letter(i)].width = 20
 
-    for n, user in users.iterrows():
+    for n, user in context.users.iterrows():
         n += 2
         uid = user[0]
         gid = user[1]
@@ -54,7 +52,4 @@ if __name__ == "__main__":
     from datetime import date
     now = date.today()
 
-    data_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
-    users_filename = os.path.join(data_path, "users.pkl")
-
-    make_user_report(now.strftime('%b%Y'), directory=os.getcwd(), pkl_file=users_filename)
+    make_user_report(now.strftime("%b%Y"), directory=os.getcwd())

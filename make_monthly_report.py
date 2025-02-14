@@ -13,6 +13,8 @@ from dateutil import relativedelta
 
 from utils import parse_date, set_verbosity
 
+from load_data import Context
+
 
 # -- Running functions which collect all usage data over the last NUM_MONTHS starting from THIS_MONTH ----- #
 # -- Automatically detects if data exists in the SQL database and uses it if so --------------------------- #
@@ -46,18 +48,15 @@ DIRECTORY = args.directory
 set_verbosity(VERBOSITY)
 
 
-# TODO get storage usage from /m31/reps/wekafs.qta
-STORAGE_QUOTA = '/m31/reps/wekafs.qta'
-SCRATCH_REPORT = '/scratch/usage/scratch_report'
-DATA_REPORT = '/data/usage/data_report'
+context = Context(verbosity = VERBOSITY, path_to_quota = "/m31/reps/wekafs.qta", path_to_pkl = os.getenv("REPORT_DATA_PATH", os.getcwd()))
 
-print(f'Generating report for {FIRST_MONTH} through {THIS_MONTH}.')
+print(f"Generating report for {FIRST_MONTH} through {THIS_MONTH}.")
 if OUTPUT_FILES:
-    print(f'Generating output files: {OUTPUT_FILES}. File format: .{OUTPUT_EXTENSION}')
+    print(f"Generating output files: {OUTPUT_FILES}. File format: .{OUTPUT_EXTENSION}")
 else:
-    print(f'Generating output files: {OUTPUT_FILES}.')
+    print(f"Generating output files: {OUTPUT_FILES}.")
 
-print(f'Inserting new data into database: {INSERT}')
+print(f"Inserting new data into database: {INSERT}")
 
 if DIRECTORY is not None:
     try:
@@ -70,32 +69,29 @@ monthly_reports = []
 
 t0 = time.time()
 for n,month in enumerate(months):
-    report_generators = [SACCTReportGenerator(month)]
-    if n == 0:
-        storage_report_generator = StorageReportGenerator(STORAGE_REPORT, callback=snapshot_callback)
-        report_generators.append(storage_report_generator)
-
+    report_generators = [SREPORTGenerator(context, month), StorageReportGenerator(context)]
     monthly_report = MonthlyReport(report_generators)
     monthly_reports.append(monthly_report)
 
 report = Report(months, monthly_reports)
 
 t1 = time.time()
-print(f'Querying usage data took {(t1 - t0):.2f} seconds.')
+print(f"Querying usage data took {(t1 - t0):.2f} seconds.")
 
 #if INSERT:
 #    report.insert('monthlyUsage')
 
 # Process report
 group_usage = report.get_group_usage()
-total_group_usage = {key: {gid: sum(group_usage[key][gid]) for gid in GROUPS} for key in SACCT_USAGE_KEYS}
+total_group_usage = {key: {gid: sum(group_usage[key][gid]) for gid in context.gids} for key in SACCT_USAGE_KEYS}
 sum_usage = report.get_sum_usage()
 
-data_storage = report.query('dataStorage', idx=-1)
-scratch_storage = report.query('scratchStorage', idx=-1)
+home_storage = report.query("homeStorage", idx=-1)
+scratch_storage = report.query("scratchStorage", idx=-1)
+project_storage = report.query("projectStorage", idx=-1)
 
 total_storage = {}
-for storage in [data_storage, scratch_storage]:
+for storage in [home_storage, scratch_storage, project_storage]:
     for id,val in storage.items():
         if id not in total_storage:
             total_storage[id] = 0
@@ -122,27 +118,34 @@ total_mem = (NUM_48_CORE_NODES + NUM_48_CORE_GPU_NODES)*192 + (NUM_64_CORE_NODES
 
 plt.rcParams['font.size'] = 25
 
-plot_storage_by_group(data_storage, cutoff=11, title=f'/data/ storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_storage_by_group(scratch_storage, cutoff=11, title=f'/scratch/ storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_storage_by_department(data_storage, title=f'/data/ storage usage by department', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_storage_by_department(scratch_storage, title=f'/scratch/ storage usage by department', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_storage_by_group_piechart(total_storage, cutoff=7, total_storage=TOTAL_STORAGE_SPACE, title=f'Adromeda total storage', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_group(context, home_storage, cutoff=11, title=f"/home/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_group(context, scratch_storage, cutoff=11, title=f"/scratch/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_group(context, project_storage, cutoff=11, title=f"/project/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_department(context, home_storage, title=f"/home/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_department(context, scratch_storage, title=f"/scratch/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_department(context, project_storage, title=f"/project/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_group_piechart(context, total_storage, cutoff=7, total_storage=TOTAL_STORAGE_SPACE, title=f"Adromeda total storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 
-plot_usage_by_department(total_group_usage['cpuUsage'], start_date=report.months[0], end_date=report.months[-1], title='CPU Usage by department', output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_department(context, total_group_usage["cpuUsage"], start_date=report.months[0], end_date=report.months[-1], title="CPU Usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_group(context, total_group_usage["cpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"CPU time used", xlabel = r"CPU hours used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_group(context, total_group_usage["gpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"GPU time used", xlabel = r"GPU hours used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_group(context, total_group_usage["reqMem"], start_date=report.months[0], end_date=report.months[-1], title=f"MEM requested", xlabel=r"GB$\cdot$hrs used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 
-plot_usage_by_group(total_group_usage['cpuUsage'], start_date=report.months[0], end_date=report.months[-1], title=f'CPU time used', xlabel = r'CPU hours used', threshold = 1e5, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_usage_by_group(total_group_usage['gpuUsage'], start_date=report.months[0], end_date=report.months[-1], title=f'GPU time used', xlabel = r'GPU hours used', threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_usage_by_group(total_group_usage['reqMem'], start_date=report.months[0], end_date=report.months[-1], alloc=total_group_usage['allocMem'], title=f'MEM requested', xlabel=r'GB$\cdot$hrs used', threshold = 5e5, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-
-plot_yearly_usage(sum_usage['cpuUsage'], months=report.months, title='CPU Usage - All Users', ylabel = 'CPU Hours', max_usage = (cpu_cores + gpu_cores)*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_yearly_usage(sum_usage['gpuUsage'], months=report.months, title='GPU Usage - All Users', ylabel = 'GPU Hours', max_usage = gpus*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_yearly_usage(sum_usage['reqMem'], months=report.months, alloc=sum_usage['allocMem'], title='MEM Usage - All Users', ylabel = r'GB$\cdot$hours', max_usage = total_mem*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-
-make_report_sheet(report, directory=DIRECTORY)
-
-
-update_users(users_filename=users_filename, groups_filename=groups_filename)
-make_user_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=users_filename)
-make_group_report(date_label(THIS_MONTH), directory=DIRECTORY, pkl_file=groups_filename)
+plot_yearly_usage(sum_usage["cpuUsage"], months=report.months, title="CPU Usage - All Users", ylabel = "CPU Hours", max_usage = (cpu_cores + gpu_cores)*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_yearly_usage(sum_usage["gpuUsage"], months=report.months, title="GPU Usage - All Users", ylabel = "GPU Hours", max_usage = gpus*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_yearly_usage(sum_usage["reqMem"], months=report.months, title="MEM Usage - All Users", ylabel = r"GB$\cdot$hours", max_usage = total_mem*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 
 
+make_report_sheet(context, report, directory=DIRECTORY)
+
+
+update_users(context)
+make_user_report(context, date_label(THIS_MONTH), directory=DIRECTORY)
+make_group_report(context, date_label(THIS_MONTH), directory=DIRECTORY)
+
+
+# TODO
+# Whats up with shibh?
+# Need permissions on projects to be corrected
+# detect missing groups and do something about it
+# fix thresholds

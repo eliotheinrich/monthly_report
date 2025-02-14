@@ -25,27 +25,27 @@ def capture(cmd):
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT
     )
-    return result.stdout.decode('utf-8')
+    return result.stdout.decode("utf-8")
 
 
 def parse_storage(storage: str) -> float:
-    if storage == '0':
+    if storage == "0":
         return 0
 
     num, postfix = float(storage[:-1]), storage[-1]
-    if postfix == 'K':
+    if postfix == "K":
         return num/1e6
-    elif postfix == 'M':
+    elif postfix == "M":
         return num/1e3
-    elif postfix == 'G':
+    elif postfix == "G":
         return num
-    elif postfix == 'T':
+    elif postfix == "T":
         return num*1e3
 
 
 # Parses a date string in the format 2023-01-01 to a datetime object
 def parse_date(date: str) -> datetime:
-    date = datetime.datetime.strptime(date, '%Y-%m-%d').date()
+    date = datetime.datetime.strptime(date, "%Y-%m-%d").date()
     date = remove_day(date)
     return date
 
@@ -59,17 +59,17 @@ def remove_day(date) -> datetime:
 
 # Converts elapsed time returned by sacct to hours
 def parse_time(time: str) -> int:
-    if '-' in time:
-        ind = time.index('-')
+    if "-" in time:
+        ind = time.index("-")
         days = int(time[0:ind])
         return 24*days + parse_time(time[ind+1:])
 
-    hrs, mins, secs = [int(i) for i in time.split(':')]
+    hrs, mins, secs = [int(i) for i in time.split(":")]
 
     return secs/3600 + mins/60 + hrs
 
 
-mem_pattern = re.compile(r'([0-9.]+)([a-zA-Z]+)')
+mem_pattern = re.compile(r"([0-9.]+)([a-zA-Z]+)")
 
 
 # Parses memory output of sacct to produce the gigabytes used
@@ -81,16 +81,16 @@ def parse_mem(mem: str, ncores: int, nodes: int) -> int:
     if float(num) == 0.0:
         return 0.0
 
-    if info[0] == 'G':
+    if info[0] == "G":
         gigabytes = float(mem[:-2])
-    elif info[0] == 'M':
+    elif info[0] == "M":
         gigabytes = float(mem[:-2])/1000
     else:
         raise ValueError
 
-    if info[1] == 'n':
+    if info[1] == "n":
         gigabytes *= int(nodes)
-    elif info[1] == 'c':
+    elif info[1] == "c":
         gigabytes *= int(ncores)
 
     return gigabytes

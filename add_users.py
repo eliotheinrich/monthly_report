@@ -5,76 +5,78 @@ import argparse
 
 from utils import capture
 
-from load_data import load_groups, load_users, save_users
+from load_data import Context
 
 
 def user_exists(uid: str):
-    s = capture(f'getent passwd {uid}').strip()
-    return s != ''
+    s = capture(f"getent passwd {uid}").strip()
+    return s != ""
 
 
 def get_name(uid: str):
-    s = capture(f'getent passwd {uid}').strip()
-    name = s.split(':')[4]
+    s = capture(f"getent passwd {uid}").strip()
+    name = s.split(":")[4]
     first_name = name.split()[0]
     last_name = name.split()[-1]
 
-    return {'first_name': first_name, 'last_name': last_name}
+    return {"first_name": first_name, "last_name": last_name}
 
 
 def get_nuid(uid: str):
-    return capture(f'id -u {uid}').strip()
+    return capture(f"id -u {uid}").strip()
 
 
 def get_email(uid: str):
-    return uid + '@bc.edu'
+    return uid + "@bc.edu"
 
 
-def update_users(verbose: bool):
+def get_project_owner(context: Context, project: str):
+    if project in context.projects:
+        return context.projects[project]
+    else:
+        return project
+
+
+def update_users(context: Context):
     unknown_ngids = set()
 
-    groups = load_groups()
-    users = load_users()
-
-    sacctmgr_output = capture('sacctmgr list user -Pn').strip().split('\n')
+    sacctmgr_output = capture("sacctmgr list user -Pn").strip().split("\n")
     andromeda_users = []
     for line in sacctmgr_output:
-        uid, acct, _ = line.split('|')
-        if not (users['uid'] == uid).any():
+        uid, project, _ = line.split("|")
+        if uid not in context.uids:
             if user_exists(uid):
-                new_user = {'uid': uid, 'acct': acct, 'nuid': get_nuid(uid), 'email': get_email(uid), **get_name(uid)}
+                new_user = {"uid": uid, "project": project, "project_owner": get_project_owner(context, project), "nuid": get_nuid(uid), "email": get_email(uid), **get_name(uid)}
                 andromeda_users.append(new_user)
             else:
-                if verbose:
+                if context.verbose:
                     print(f"User {uid} exists in slurmdb but not posix permissions.")
 
-
     # Updating userInfo
-    def add_user(user_info):
-        nonlocal users
-        uid = user_info['uid']
+    def add_user(users, user_info, context):
+        uid = user_info["uid"]
 
         # Check if user already exists before proceeding
-        if (users['uid'] == uid).any():
+        if uid in list(users["uid"]):
             return
         else:
-            if verbose:
+            if context.verbose:
                 print(f"Adding {uid}")
 
-        acct = user_info['acct']
-        nuid = user_info['nuid']
-        first_name = user_info['first_name']
-        last_name = user_info['last_name']
-        email = user_info['email']
+        project = user_info["project"]
+        project_owner = user_info["project_owner"]
+        nuid = user_info["nuid"]
+        first_name = user_info["first_name"]
+        last_name = user_info["last_name"]
+        email = user_info["email"]
 
-        users = pd.concat([users, pd.DataFrame([[uid, acct, nuid, first_name, last_name, email]], columns=users.columns)], ignore_index=True)
-        users = users.sort_values("uid")
+        users = pd.concat([users, pd.DataFrame([[uid, project, project_owner, nuid, first_name, last_name, email]], columns=users.columns)], ignore_index=True)
+        return users.sort_values("uid")
 
-
+    users = context.users
     for user_info in andromeda_users:
-        add_user(user_info)
-
-    save_users(users)
+        users = add_user(users, user_info, context)
+    context.save_users(users)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -82,4 +84,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     verbose = args.verbose
 
-    update_users(verbose)
+    context = Context(verbosity = verbose, path_to_pkl = os.getenv("REPORT_DATA_PATH", os.getcwd()))
+
+    update_users(context)
