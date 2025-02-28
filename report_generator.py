@@ -151,7 +151,9 @@ class SREPORTGenerator:
 
     def get_project_usage_sreport(self, project: str):
         cmd = f"sreport cluster AccountUtilizationByUser Accounts={project} -T cpu,mem,gres/gpu start={self.start_date} end={self.end_date} | awk 'NR > 6 {{print $NF}}'"
-        result = capture(cmd).strip().split("\n")#:[1:]
+        if self.context.verbose:
+            print(cmd)
+        result = capture(cmd).strip().split("\n")
 
         if result == ['']:
             cpu = 0.0
@@ -168,7 +170,7 @@ class SREPORTGenerator:
 
     def get_user_usage_sreport(self, gid: str):
         usage = {key: 0.0 for key in SACCT_USAGE_KEYS}
-        for project in context.project_owners[gid]:
+        for project in self.context.project_owners[gid]:
             project_usage = self.get_project_usage_sreport(project)
             for key, val in project_usage.items():
                 usage[key] += val

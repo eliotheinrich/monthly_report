@@ -95,12 +95,12 @@ def plot_yearly_usage(
     # Show max usage in red
     if max_usage is None:
         max_usage = max(total_usage)*1.1
-    ax.axhline(max_usage, color="r", linestyle="--", alpha=0.5)
+    #ax.axhline(max_usage, color="r", linestyle="--", alpha=0.5)
 
     # Format y-axis
     if ylabel is not None:
         plt.ylabel(ylabel)
-    ax.set_ylim(0, 1.2*max_usage)
+    #ax.set_ylim(0, 1.2*max_usage)
     ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
     # Hide axis spines
