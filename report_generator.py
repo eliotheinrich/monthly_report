@@ -11,26 +11,6 @@ from load_data import Context
 
 SACCT_USAGE_KEYS = ["cpuUsage", "gpuUsage", "reqMem", "allocMem"]
 
-# Gets a dictionary mapping every uid in userInfo to their corresponding gid
-#def all_users():
-#    global users
-#
-#    uids = list(users["uid"])
-#    project_owners = list(users["project_owner"])
-#
-#    users_by_group = {}
-#    for uid, owner in zip(uids, project_owners):
-#        if owner not in GROUPS:
-#            continue
-#
-#        users_by_group[uid] = owner
-#
-#    return users_by_group
-#
-#
-#USER_GROUPS = all_users()
-
-
 class Report:
     def __init__(self, months, monthly_reports):
         months = [str(m) for m in months]
