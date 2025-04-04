@@ -6,7 +6,7 @@ import argparse
 
 from add_users import load_users, save_users
 
-def remove_user(uid):
+def remove_user(pkl_path, uid):
     print(f'Deleting {uid}. ')
 
     s = ''
@@ -20,7 +20,7 @@ def remove_user(uid):
         else:
             print('Please enter either y or n.')
 
-    users = load_users()
+    users = load_users(pkl_path)
 
     # Check if group already exists before proceeding
     if not (users['uid'] == uid).any():
@@ -28,7 +28,7 @@ def remove_user(uid):
     else:
         users = users[users.uid != uid]
 
-        save_users(users)
+        save_users(pkl_path, users)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,4 +38,5 @@ if __name__ == "__main__":
 
     uid = args.uid
 
-    remove_user(uid)
+    pkl_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    remove_user(pkl_path, uid)

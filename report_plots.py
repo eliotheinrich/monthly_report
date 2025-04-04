@@ -12,7 +12,7 @@ def date_label(date):
 
 plt.rcParams["font.size"] = 25
 
-def plot_usage_by_group(context, group_usage, start_date, end_date, title=None, xlabel=None, threshold=-1, directory=None, output_extension="png"):
+def plot_usage_by_group(context, group_usage, start_date, end_date, title=None, xlabel=None, threshold=-1, directory=None, output_extension="png", f=None):
     if directory is None:
         directory = ""
     else:
@@ -23,12 +23,15 @@ def plot_usage_by_group(context, group_usage, start_date, end_date, title=None, 
     users, time = zip(*[(k, v) for k,v in group_usage.items() if v >= threshold])
     sorted_inds = np.flip(np.argsort(time))
     users, time = np.array(users)[sorted_inds], np.array(time)[sorted_inds]
+    users = users[:threshold]
+    time = time[:threshold]
 
     ax.barh([context.get_label(gid) for gid in users], time, color="orange", label="Requested")
         
     plt.yticks(rotation=0)
     ax.set_xlim(0, max(time)*1.2)
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
+    if f is None:
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
     plt.title(f"{date_label(start_date)} - {date_label(end_date)}", y=1.0, pad=30)
     if title is not None:
         plt.suptitle(title)
@@ -60,7 +63,8 @@ def plot_yearly_usage(
         ylabel: str = None,
         max_usage: int = None,
         directory: str = None,
-        output_extension="png"
+        output_extension="png",
+        f=None
     ):
 
     if directory is None:
@@ -101,7 +105,8 @@ def plot_yearly_usage(
     if ylabel is not None:
         plt.ylabel(ylabel)
     #ax.set_ylim(0, 1.2*max_usage)
-    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
+    if f is None:
+        ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
     # Hide axis spines
     ax.spines["top"].set_visible(False)
@@ -121,7 +126,13 @@ def plot_yearly_usage(
     plt.savefig(f"{directory}/{title}.{output_extension}", bbox_inches="tight")
     plt.show()
 
-def plot_usage_by_department(context, total_usage_by_group, start_date, end_date, title, directory=None, output_extension="png"):
+ABBREVIATIONS = {
+    "Carroll School of Management": "CSOM", 
+    "Lynch School of Education and Human Development": "LSOE",
+    "Earth and Environmental Sciences": "EES",
+}
+
+def plot_usage_by_department(context, total_usage_by_group, start_date, end_date, title, directory=None, output_extension="png", f=None):
     if directory is None:
         directory = ""
     else:
@@ -129,8 +140,11 @@ def plot_usage_by_department(context, total_usage_by_group, start_date, end_date
             directory = directory[:-1]
     usage_by_department = {}
 
+
     for gid, time in total_usage_by_group.items():
         department = context.get_department(gid)
+        if department in ABBREVIATIONS:
+            department = ABBREVIATIONS[department]
         if department not in usage_by_department:
             usage_by_department[department] = 0.
         usage_by_department[department] += time
@@ -143,7 +157,8 @@ def plot_usage_by_department(context, total_usage_by_group, start_date, end_date
     ax.barh(departments, time, color="orange")
     plt.yticks(rotation=0)
     plt.xlabel("CPU hours used")
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
+    if f is None:
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
     plt.title(f"{date_label(start_date)} - {date_label(end_date)}", y=1.0, pad=30)
     if title is not None:
@@ -166,7 +181,7 @@ def plot_usage_by_department(context, total_usage_by_group, start_date, end_date
     plt.savefig(f"{directory}/{title}.{output_extension}", bbox_inches="tight")
     plt.show()
 
-def plot_storage_by_department(context, storage_by_group, title=None, directory=None, output_extension="png"):
+def plot_storage_by_department(context, storage_by_group, title=None, directory=None, output_extension="png", f=None):
     if directory is None:
         directory = ""
     else:
@@ -179,6 +194,9 @@ def plot_storage_by_department(context, storage_by_group, title=None, directory=
             department = context.get_department(gid)
         except ValueError:
             continue
+
+        if department in ABBREVIATIONS:
+            department = ABBREVIATIONS[department]
         
         if department not in storage_by_department:
             storage_by_department[department] = 0.
@@ -193,7 +211,8 @@ def plot_storage_by_department(context, storage_by_group, title=None, directory=
     ax.barh(departments, storage_usage, color="orange")
     plt.yticks(rotation=0)
     plt.xlabel("Storage space used (GB)")
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
+    if f is None:
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
     if title is not None:
         plt.suptitle(title)
@@ -216,7 +235,7 @@ def plot_storage_by_department(context, storage_by_group, title=None, directory=
     plt.show()
 
 
-def plot_storage_by_group(context, storage_by_group, cutoff=None, title=None, directory=None, output_extension="png"):
+def plot_storage_by_group(context, storage_by_group, cutoff=None, title=None, directory=None, output_extension="png", f=None):
     if directory is None:
         directory = ""
     else:
@@ -241,7 +260,8 @@ def plot_storage_by_group(context, storage_by_group, cutoff=None, title=None, di
     ax.barh(groups, storage_usage, color="orange")
     plt.yticks(rotation=0)
     plt.xlabel("Storage space used (GB)")
-    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
+    if f is None:
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
     if title is not None:
         plt.title(title)
 

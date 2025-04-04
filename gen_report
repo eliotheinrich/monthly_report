@@ -1,1 +1,5 @@
-python make_monthly_report.py 2024-10-01 --num-months 13 --directory "September_Report" --output-extension png
+export MONTH=March
+
+python make_monthly_report.py 2025-04-01 -i -v --num-months 4 --directory "${MONTH}_Report" --output-extension png
+
+tar -czvf ${MONTH}_Report_A2.tar.gz ${MONTH}_Report

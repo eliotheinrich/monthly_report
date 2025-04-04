@@ -118,23 +118,22 @@ total_mem = (NUM_48_CORE_NODES + NUM_48_CORE_GPU_NODES)*192 + (NUM_64_CORE_NODES
 
 plt.rcParams['font.size'] = 25
 
-plot_storage_by_group(context, home_storage, cutoff=11, title=f"/home/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_group(context, home_storage, cutoff=11, title=f"/home/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY, f="home")
 plot_storage_by_group(context, scratch_storage, cutoff=11, title=f"/scratch/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 plot_storage_by_group(context, project_storage, cutoff=11, title=f"/project/ storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_storage_by_department(context, home_storage, title=f"/home/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_storage_by_department(context, home_storage, title=f"/home/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY, f="home")
 plot_storage_by_department(context, scratch_storage, title=f"/scratch/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 plot_storage_by_department(context, project_storage, title=f"/project/ storage usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 plot_storage_by_group_piechart(context, total_storage, cutoff=7, total_storage=TOTAL_STORAGE_SPACE, title=f"Adromeda total storage", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 
 plot_usage_by_department(context, total_group_usage["cpuUsage"], start_date=report.months[0], end_date=report.months[-1], title="CPU Usage by department", output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_usage_by_group(context, total_group_usage["cpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"CPU time used", xlabel = r"CPU hours used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_usage_by_group(context, total_group_usage["gpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"GPU time used", xlabel = r"GPU hours used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_usage_by_group(context, total_group_usage["reqMem"], start_date=report.months[0], end_date=report.months[-1], title=f"MEM requested", xlabel=r"GB$\cdot$hrs used", threshold = 0, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_group(context, total_group_usage["cpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"CPU time used", xlabel = r"CPU hours used", threshold = 15, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_usage_by_group(context, total_group_usage["gpuUsage"], start_date=report.months[0], end_date=report.months[-1], title=f"GPU time used", xlabel = r"GPU hours used", threshold = 15, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY, f="GPU")
+plot_usage_by_group(context, total_group_usage["reqMem"], start_date=report.months[0], end_date=report.months[-1], title=f"MEM requested", xlabel=r"GB$\cdot$hrs used", threshold = 15, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
 
 plot_yearly_usage(sum_usage["cpuUsage"], months=report.months, title="CPU Usage - All Users", ylabel = "CPU Hours", max_usage = (cpu_cores + gpu_cores)*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-plot_yearly_usage(sum_usage["gpuUsage"], months=report.months, title="GPU Usage - All Users", ylabel = "GPU Hours", max_usage = gpus*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
+plot_yearly_usage(sum_usage["gpuUsage"], months=report.months, title="GPU Usage - All Users", ylabel = "GPU Hours", max_usage = gpus*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY, f="GPU")
 plot_yearly_usage(sum_usage["reqMem"], months=report.months, title="MEM Usage - All Users", ylabel = r"GB$\cdot$hours", max_usage = total_mem*24*365/12, output_extension=OUTPUT_EXTENSION, directory=DIRECTORY)
-
 
 make_report_sheet(context, report, directory=DIRECTORY)
 

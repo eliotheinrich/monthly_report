@@ -6,7 +6,7 @@ import argparse
 
 from add_group import load_groups, save_groups
 
-def remove_group(gid):
+def remove_group(pkl_path, gid):
     print(f'Deleting {gid}. ')
 
     s = ''
@@ -20,7 +20,7 @@ def remove_group(gid):
         else:
             print('Please enter either y or n.')
 
-    groups = load_groups(group_filename)
+    groups = load_groups(pkl_path)
 
     # Check if group already exists before proceeding
     if not (groups['gid'] == gid).any():
@@ -28,7 +28,7 @@ def remove_group(gid):
     else:
         groups = groups[groups.gid != gid]
 
-        save_groups(groups)
+        save_groups(pkl_path, groups)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -38,4 +38,5 @@ if __name__ == "__main__":
 
     gid = args.gid
 
-    remove_group(gid)
+    pkl_path = os.getenv("REPORT_DATA_PATH", os.getcwd())
+    remove_group(pkl_path, gid)
