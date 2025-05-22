@@ -9,12 +9,39 @@ from load_data import load_groups, save_groups
 
 from add_users import get_name, get_nuid, get_email
 
+import pwd
+def user_exists(uid):
+    try:
+        pwd.getpwnam(uid)
+        return True
+    except KeyError:
+        return False
+
+
+def proceed():
+    s = ""
+    while s not in ["y", "Y", "n", "N"]: 
+        s = input("Proceed? (y/n): ")
+        if s == "y" or s == "Y":
+            return True
+        elif s == "n" or s == "N":
+            return False
+        else:
+            print("Please enter either y or n.")
+
+
 def add_group(pkl_path, gid, dept):
     groups = load_groups(pkl_path)
 
+    if dept not in list(groups["dept"]):
+        print(f"The provided department {dept} does not already exist. Still add group?")
+        if not proceed():
+            print("Exiting.")
+            return
+
     # Check if group already exists before proceeding
-    if (groups['gid'] == gid).any():
-        print(f'User {gid} already exists; skipping.')
+    if (groups["gid"] == gid).any():
+        print(f"User {gid} already exists; skipping.")
     else:
         ngid = capture(f'id -u {gid}').strip()
         name = get_name(gid)
@@ -28,6 +55,7 @@ def add_group(pkl_path, gid, dept):
 
         save_groups(pkl_path, groups)
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser()
 
@@ -38,22 +66,19 @@ def parse_arguments():
     gid = args.gid
     dept = args.department
 
-    print('You entered ')
-    print(f'gid: {gid}')
-    print(f'department: {dept}')
+    if not user_exists(gid):
+        print(f"User {gid} does not exist. Exiting.")
+        quit()
 
-    s = ''
-    while s not in ['y', 'Y', 'n', 'N']: 
-        s = input('Is this correct? (y/n): ')
-        if s == 'y' or s == 'Y':
-            break
-        elif s == 'n' or s == 'N':
-            print('Please try again.')
-            return
-        else:
-            print('Please enter either y or n.')
+    print("You entered ")
+    print(f"gid: {gid}")
+    print(f"department: {dept}")
 
-    return gid, dept,
+    if proceed():
+        return gid, dept,
+    else:
+        print("Exiting.")
+        quit()
 
 
 if __name__ == "__main__":

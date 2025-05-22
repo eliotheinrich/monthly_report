@@ -85,6 +85,9 @@ def plot_yearly_usage(
     plt.plot(xticks, total_usage, color="orange")
     legend_items.append((mpl.patches.Rectangle([0,0],0,0, color="orange"), "Requested"))
     plt.fill_between(xticks, total_usage, color="orange")
+    _, upper = plt.gca().get_ylim()
+    plt.ylim(0, upper)
+
  
     plt.suptitle(title)
     plt.title(f"{date_label(start_date)} - {date_label(end_date)}")

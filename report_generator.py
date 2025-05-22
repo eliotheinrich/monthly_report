@@ -150,10 +150,13 @@ class SREPORTGenerator:
 
     def get_user_usage_sreport(self, gid: str):
         usage = {key: 0.0 for key in SACCT_USAGE_KEYS}
-        for project in self.context.project_owners[gid]:
-            project_usage = self.get_project_usage_sreport(project)
-            for key, val in project_usage.items():
-                usage[key] += val
+        if gid in self.context.project_owners:
+            for project in self.context.project_owners[gid]:
+                project_usage = self.get_project_usage_sreport(project)
+                for key, val in project_usage.items():
+                    print(key, val)
+                    usage[key] += val
+
         return usage
 
 
