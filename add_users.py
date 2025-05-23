@@ -43,7 +43,7 @@ def update_users(context: Context):
     sacctmgr_output = capture("sacctmgr list user -Pn").strip().split("\n")
     andromeda_users = []
     for line in sacctmgr_output:
-        uid, project, _ = line.split("|")
+        uid, project, _, _ = line.split("|")
         if uid not in context.uids:
             if user_exists(uid):
                 new_user = {"uid": uid, "project": project, "project_owner": get_project_owner(context, project), "nuid": get_nuid(uid), "email": get_email(uid), **get_name(uid)}

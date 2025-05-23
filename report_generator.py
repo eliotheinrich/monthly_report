@@ -121,7 +121,8 @@ class SREPORTGenerator:
                 usage[usage_key][gid] = user_usage[usage_key]
 
         # Serialize data
-        self.context.save_usage(self.pkl_data)
+        if self.context.insert:
+            self.context.save_usage(self.pkl_data)
 
         return usage
 

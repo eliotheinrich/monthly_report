@@ -48,7 +48,7 @@ DIRECTORY = args.directory
 set_verbosity(VERBOSITY)
 
 
-context = Context(verbosity = VERBOSITY, path_to_quota = "/m31/reps/wekafs.qta", path_to_pkl = os.getenv("REPORT_DATA_PATH", os.getcwd()))
+context = Context(verbosity = VERBOSITY, insert_data = INSERT, path_to_quota = "/m31/reps/wekafs.qta", path_to_pkl = os.getenv("REPORT_DATA_PATH", os.getcwd()))
 
 print(f"Generating report for {FIRST_MONTH} through {THIS_MONTH}.")
 if OUTPUT_FILES:
@@ -144,7 +144,4 @@ make_group_report(context, date_label(THIS_MONTH), directory=DIRECTORY)
 
 
 # TODO
-# Whats up with shibh?
-# Need permissions on projects to be corrected
-# detect missing groups and do something about it
 # fix thresholds

@@ -81,7 +81,7 @@ def get_projects_and_owners():
 
 
 class Context:
-    def __init__(self, verbosity, path_to_pkl, path_to_quota=None):
+    def __init__(self, path_to_pkl, verbosity=False, insert_data=False, path_to_quota=None):
         self.verbose = verbosity
 
         self.path_to_quota = path_to_quota
@@ -94,7 +94,9 @@ class Context:
 
         self.projects, self.project_owners = get_projects_and_owners()
 
-        ignored = ["root", "shibh", "parif"]
+        self.insert = insert_data
+
+        ignored = ["root", "shibh", "parif", "johnchris", "gregas"]
         for owner in self.project_owners:
             if owner not in self.gids and owner not in ignored:
                 raise RuntimeError(f"owner {owner} not found.")
