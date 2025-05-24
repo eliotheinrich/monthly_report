@@ -4,7 +4,7 @@ import os
 
 import argparse
 
-from add_users import load_users, save_users
+from load_data import load_users, save_users
 
 def remove_user(pkl_path, uid):
     print(f'Deleting {uid}. ')
