@@ -19,7 +19,6 @@ def make_user_report(context, date, directory):
     wb = openpyxl.Workbook()
     sheet = wb.active
     sheet.title = "User info"
-
     add_cell(sheet, 1, 1, "uid", font=fontb)
     add_cell(sheet, 1, 2, "gid", font=fontb)
     add_cell(sheet, 1, 3, "nuid", font=fontb)
@@ -32,11 +31,11 @@ def make_user_report(context, date, directory):
     for n, user in context.users.iterrows():
         n += 2
         uid = user[0]
-        gid = user[1]
-        nuid = user[2]
-        first_name = user[3]
-        last_name = user[4]
-        email = user[5]
+        gid = user[2]
+        nuid = user[3]
+        first_name = user[4]
+        last_name = user[5]
+        email = user[6]
 
         add_cell(sheet, n, 1, uid)
         add_cell(sheet, n, 2, gid)
