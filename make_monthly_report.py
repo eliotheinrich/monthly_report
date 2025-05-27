@@ -104,7 +104,7 @@ if not OUTPUT_FILES:
 
 
 # TODO modify for Andromeda 2 (perhaps collect algorithmically?)
-TOTAL_STORAGE_SPACE = 0.9*1e6 # 900 TB
+TOTAL_STORAGE_SPACE = 1.5*(1024)**2 # 1.5 PB
 
 NUM_48_CORE_NODES = 94
 NUM_48_CORE_GPU_NODES = 3
