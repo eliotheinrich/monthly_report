@@ -44,9 +44,13 @@ def update_users(context: Context):
     andromeda_users = []
     for line in sacctmgr_output:
         uid, project, _, _ = line.split("|")
+        projects = capture(f"sacctmgr show user {uid} withassoc format=Account%30 -n | awk '{{$1=$1}};1'").strip().split("\n")
+        projects = ', '.join(projects)
         if uid not in context.uids:
             if user_exists(uid):
-                new_user = {"uid": uid, "project": project, "project_owner": get_project_owner(context, project), "nuid": get_nuid(uid), "email": get_email(uid), **get_name(uid)}
+                new_user = {"uid": uid, "nuid": get_nuid(uid), 
+                            "projects": projects, "gid": get_project_owner(context, project), 
+                            "email": get_email(uid), **get_name(uid)}
                 andromeda_users.append(new_user)
             else:
                 if context.verbose:
@@ -63,14 +67,14 @@ def update_users(context: Context):
             if context.verbose:
                 print(f"Adding {uid}")
 
-        project = user_info["project"]
-        project_owner = user_info["project_owner"]
         nuid = user_info["nuid"]
+        projects = user_info["projects"]
+        gid = user_info["gid"]
         first_name = user_info["first_name"]
         last_name = user_info["last_name"]
         email = user_info["email"]
 
-        users = pd.concat([users, pd.DataFrame([[uid, project, project_owner, nuid, first_name, last_name, email]], columns=users.columns)], ignore_index=True)
+        users = pd.concat([users, pd.DataFrame([[uid, nuid, projects, gid, first_name, last_name, email]], columns=users.columns)], ignore_index=True)
         return users.sort_values("uid")
 
     users = context.users

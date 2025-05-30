@@ -20,29 +20,32 @@ def make_user_report(context, date, directory):
     sheet = wb.active
     sheet.title = "User info"
     add_cell(sheet, 1, 1, "uid", font=fontb)
-    add_cell(sheet, 1, 2, "gid", font=fontb)
-    add_cell(sheet, 1, 3, "nuid", font=fontb)
-    add_cell(sheet, 1, 4, "First name", font=fontb)
-    add_cell(sheet, 1, 5, "Last name", font=fontb)
-    add_cell(sheet, 1, 6, "Email", font=fontb)
+    add_cell(sheet, 1, 2, "projects", font=fontb)
+    add_cell(sheet, 1, 3, "gid", font=fontb)
+    add_cell(sheet, 1, 4, "nuid", font=fontb)
+    add_cell(sheet, 1, 5, "First name", font=fontb)
+    add_cell(sheet, 1, 6, "Last name", font=fontb)
+    add_cell(sheet, 1, 7, "Email", font=fontb)
     for i in range(1, 7):
         sheet.column_dimensions[get_column_letter(i)].width = 20
 
     for n, user in context.users.iterrows():
         n += 2
         uid = user[0]
-        gid = user[2]
-        nuid = user[3]
+        nuid = user[1]
+        projects = user[2]
+        gid = user[3]
         first_name = user[4]
         last_name = user[5]
         email = user[6]
 
         add_cell(sheet, n, 1, uid)
-        add_cell(sheet, n, 2, gid)
-        add_cell(sheet, n, 3, nuid)
-        add_cell(sheet, n, 4, first_name)
-        add_cell(sheet, n, 5, last_name)
-        add_cell(sheet, n, 6, email)
+        add_cell(sheet, n, 2, projects)
+        add_cell(sheet, n, 3, gid)
+        add_cell(sheet, n, 4, nuid)
+        add_cell(sheet, n, 5, first_name)
+        add_cell(sheet, n, 6, last_name)
+        add_cell(sheet, n, 7, email)
 
     wb.save(filename=wb_name)
 
@@ -51,4 +54,5 @@ if __name__ == "__main__":
     from datetime import date
     now = date.today()
 
-    make_user_report(now.strftime("%b%Y"), directory=os.getcwd())
+    context = Context(verbosity = 0, insert_data = 0, path_to_quota = "/m31/reps/wekafs.qta", path_to_pkl = os.getenv("REPORT_DATA_PATH", os.getcwd()))
+    make_user_report(context, now.strftime("%b%Y"), directory=os.getcwd())

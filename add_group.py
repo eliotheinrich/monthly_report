@@ -5,7 +5,7 @@ import os
 import argparse
 
 from utils import capture
-from load_data import load_groups, save_groups
+from load_data import load_groups, save_groups, get_projects_and_owners
 
 from add_users import get_name, get_nuid, get_email
 
@@ -48,9 +48,10 @@ def add_group(pkl_path, gid, dept):
         first_name = name["first_name"]
         last_name = name["last_name"]
         email = get_email(gid)
-        ngid, first_name, last_name, email, dept
+        _, project_owners = get_projects_and_owners()
+        projects = ', '.join(project_owners[gid])
 
-        groups = pd.concat([groups, pd.DataFrame([[gid, first_name, last_name, email, dept, ngid]], columns=groups.columns)], ignore_index=True)
+        groups = pd.concat([groups, pd.DataFrame([[gid, projects, first_name, last_name, email, dept, ngid]], columns=groups.columns)], ignore_index=True)
         groups = groups.sort_values("gid")
 
         save_groups(pkl_path, groups)

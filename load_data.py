@@ -99,7 +99,7 @@ class Context:
         ignored = ["root", "shibh", "parif", "johnchris", "gregas"]
         for owner in self.project_owners:
             if owner not in self.gids and owner not in ignored:
-                raise RuntimeError(f"owner {owner} not found.")
+                raise RuntimeError(f"The PI {owner} not found. Add them with `python add_group.py {owner} DEPARTMENT` and run again.")
 
 
     def get_group_name(self, gid: str) -> str:
