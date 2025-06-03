@@ -155,7 +155,6 @@ class SREPORTGenerator:
             for project in self.context.project_owners[gid]:
                 project_usage = self.get_project_usage_sreport(project)
                 for key, val in project_usage.items():
-                    print(key, val)
                     usage[key] += val
 
         return usage

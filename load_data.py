@@ -13,7 +13,7 @@ def load_users(pkl_path):
             users = pkl.load(f)
         return users 
     else:
-        users = pd.DataFrame(columns=["uid", "project", "project_owner", "nuid", "firstName", "lastName", "email"])
+        users = pd.DataFrame(columns=["uid", "nuid", "projects", "gid", "firstName", "lastName", "email"])
         return users 
 
 
@@ -30,7 +30,7 @@ def load_groups(pkl_path):
             groups = pkl.load(f)
         return groups
     else:
-        groups = pd.DataFrame(columns=["gid", "firstName", "lastName", "email", "dept", "ngid"])
+        groups = pd.DataFrame(columns=["gid", "projects", "firstName", "lastName", "email", "dept", "ngid"])
         return groups
 
 
@@ -119,7 +119,7 @@ class Context:
     def get_project_owner(self, id):
         if id in self.uids:
             query_result = self.users.query(f"uid == \"{id}\"")
-            gid = query_result["project_owner"].iloc[0]
+            gid = query_result["gid"].iloc[0]
             return gid
         else:
             return self.projects[id]
