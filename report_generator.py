@@ -9,10 +9,12 @@ from utils import capture, parse_time, parse_mem, parse_storage
 
 from load_data import Context
 
-SACCT_USAGE_KEYS = ["cpuUsage", "gpuUsage", "reqMem", "allocMem"]
+SACCT_USAGE_KEYS = ["cpuUsage", "gpuUsage", "reqMem"]
 
 class Report:
-    def __init__(self, months, monthly_reports):
+    def __init__(self, context, months, monthly_reports):
+        self.context = context
+
         months = [str(m) for m in months]
         self.num_months = len(months)
 
@@ -22,33 +24,41 @@ class Report:
         self.reports = [monthly_reports[i] for i in idx]
 
         self.all_keys = set()
-        self.all_groups = set()
+        self.all_groups = context.get_groups()
 
         for report in self.reports:
             self.all_keys = self.all_keys.union(report.keys())
-            self.all_groups = self.all_groups.union(report.groups())
 
-    def get_group_usage(self):
-        total_usage_by_group = {key: {gid: [] for gid in self.all_groups} for key in self.all_keys}
+    def get_group_usage(self, keys):
+        total_usage_by_group = {key: {gid: [] for gid in self.all_groups} for key in keys}
 
-        for key in self.all_keys:
+        for key in keys:
             for gid in self.all_groups:
                 for i in range(self.num_months):
                     total_usage_by_group[key][gid].append(self.reports[i].query(key, gid))
 
         return total_usage_by_group
 
-    def get_sum_usage(self):
-        total_usage = {key: [0]*self.num_months for key in self.all_keys}
+    def get_sum_usage(self, keys):
+        total_usage = {key: [0]*self.num_months for key in keys}
 
-        for key in self.all_keys:
-            for gid in self.all_groups:
-                for i in range(self.num_months):
+        for key in keys:
+            for i in range(self.num_months):
+                for gid in self.all_groups:
                     total_usage[key][i] += self.reports[i].query(key, gid)
 
         return total_usage
 
     def query(self, key, idx=None):
+        if idx is None:
+            idx = list(range(self.num_months))
+
+        usage = [self.reports[i].query(key) for i in idx]
+
+        return usage
+
+
+    def query_group_usage(self, key, idx=None):
         if idx is None:
             idx = list(range(self.num_months))
 
@@ -62,6 +72,7 @@ class Report:
 
         return usage
 
+
 class MonthlyReport:
     def __init__(self, report_generators):
         self.usage = {}
@@ -72,17 +83,58 @@ class MonthlyReport:
     def keys(self):
         return self.usage.keys()
 
-    def groups(self):
-        gids = set()
-        for key in self.keys():
-            gids = gids.union(self.usage[key].keys())
-        return gids
+    def query(self, key, gid=None):
+        if gid is None:
+            if key in self.usage:
+                return self.usage[key]
 
-    def query(self, key, gid):
         if key in self.usage and gid in self.usage[key]:
             return self.usage[key][gid]
         else:
             return 0.0
+
+
+class GlobalReportGenerator:
+    def __init__(self, context: Context, start_date: datetime, end_date: datetime = None):
+        self.context = context 
+
+        self.start_date = start_date
+        self.end_date = end_date
+        if end_date is None:
+            self.end_date = start_date.replace(day=28) + datetime.timedelta(days=4)
+            self.end_date -= datetime.timedelta(days=self.end_date.day)
+
+
+    def __call__(self):
+        cmd = f"sreport cluster utilization start={self.start_date} end={self.end_date} -t percent -T ALL --parsable2"
+        output = capture(cmd).strip().split("\n")[5:]
+
+        def parse_percent(s):
+            return float(s.replace("%", ""))
+            
+        cpu_idx = next((i for i, x in enumerate(output) if x.split("|")[1] == "cpu"), -1)
+        gpu_idx = next((i for i, x in enumerate(output) if x.split("|")[1] == "gres/gpu"), -1)
+
+        if cpu_idx == -1:
+            raise RuntimeError(f"Could not get CPU usage from output of {cmd}.")
+        if gpu_idx == -1:
+            raise RuntimeError(f"Could not get GPU usage from output of {cmd}.")
+
+        cpu_utilization = output[cpu_idx].split("|")
+        gpu_utilization = output[gpu_idx].split("|")
+        usage = {
+            "cpuAlloc":    parse_percent(cpu_utilization[2]),
+            "cpuDown":     parse_percent(cpu_utilization[3]),
+            "cpuPLNDDown": parse_percent(cpu_utilization[4]),
+            "cpuIdle":     parse_percent(cpu_utilization[5]),
+
+            "gpuAlloc":    parse_percent(gpu_utilization[2]),
+            "gpuDown":     parse_percent(gpu_utilization[3]),
+            "gpuPLNDDown": parse_percent(gpu_utilization[4]),
+            "gpuIdle":     parse_percent(gpu_utilization[5]),
+        }
+
+        return usage
 
 
 class SREPORTGenerator:
@@ -123,7 +175,7 @@ class SREPORTGenerator:
         # Serialize data
         if self.context.insert:
             self.context.save_usage(self.pkl_data)
-
+        
         return usage
 
     def get_user_usage_pkl(self, gid: str):
@@ -145,7 +197,7 @@ class SREPORTGenerator:
             mem = int(result[1])/60/1024
             gpu = int(result[2])/60
 
-        usage = {"cpuUsage": cpu, "reqMem": mem, "allocMem": mem, "gpuUsage": gpu}
+        usage = {"cpuUsage": cpu, "reqMem": mem, "gpuUsage": gpu}
         return usage
 
 

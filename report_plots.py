@@ -61,7 +61,6 @@ def plot_yearly_usage(
         months,
         title: str = None,
         ylabel: str = None,
-        max_usage: int = None,
         directory: str = None,
         output_extension="png",
         f=None
@@ -94,20 +93,16 @@ def plot_yearly_usage(
 
 
     # Format x-axis
-    #ax.set_xlim(start_date, end_date)
     ax.set_xticks(xticks)
     ax.set_xticklabels([date_label(month) for month in months], rotation=30)
 
 
     # Show max usage in red
-    if max_usage is None:
-        max_usage = max(total_usage)*1.1
-    #ax.axhline(max_usage, color="r", linestyle="--", alpha=0.5)
 
     # Format y-axis
     if ylabel is not None:
         plt.ylabel(ylabel)
-    #ax.set_ylim(0, 1.2*max_usage)
+
     if f is None:
         ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
@@ -135,7 +130,7 @@ ABBREVIATIONS = {
     "Earth and Environmental Sciences": "EES",
 }
 
-def plot_usage_by_department(context, total_usage_by_group, start_date, end_date, title, directory=None, output_extension="png", f=None):
+def plot_usage_by_department(context, total_usage_by_group, start_date, end_date, title, xlabel, directory=None, output_extension="png", f=None):
     if directory is None:
         directory = ""
     else:
@@ -159,7 +154,7 @@ def plot_usage_by_department(context, total_usage_by_group, start_date, end_date
 
     ax.barh(departments, time, color="orange")
     plt.yticks(rotation=0)
-    plt.xlabel("CPU hours used")
+    plt.xlabel(xlabel)
     if f is None:
         ax.xaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x/1000)) + "k"))
 
@@ -369,6 +364,60 @@ def plot_storage_by_group_piechart(context, storage_by_group, cutoff=None, total
     plt.subplots_adjust(bottom=0., top=1.0)
     plt.savefig(f"{directory}/{title.replace('/', '')}.{output_extension}", bbox_inches="tight")
     plt.show()
+
+def plot_utilization(utilization, labels, colors, months, title, output_extension="png", directory=None):
+    if directory is None:
+        directory = ""
+    else:
+        if directory[-1] == "/":
+            directory = directory[:-1]
+
+    num_months = len(months)
+    start_date = months[0]
+    end_date = months[-1]
+    
+    _, ax = plt.subplots(figsize=(12, 8))
+    xticks = list(range(0, num_months))
+
+    kwargs = {"linewidth": 4.0, "marker": "o"}
+    for util, label, color in zip(utilization, labels, colors):
+        plt.plot(xticks, util, label=label, color=color, **kwargs)
+    plt.legend(fontsize=20)
+    #plt.fill_between(xticks, total_usage, color="orange")
+    _, upper = plt.gca().get_ylim()
+    plt.ylim(0, upper)
+
+ 
+    plt.suptitle(title)
+    plt.title(f"{date_label(start_date)} - {date_label(end_date)}")
+
+
+    # Format x-axis
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([date_label(month) for month in months], rotation=30)
+
+    # Format y-axis
+    ax.yaxis.set_major_formatter(FuncFormatter(lambda x, p: str(int(x)) + "%"))
+
+    plt.ylabel("Utilization")
+
+    # Hide axis spines
+    ax.spines["top"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    # Add gridlines
+    for tick in ax.get_yticks():
+        plt.axhline(tick, linewidth=0.25, color="k", zorder=0)
+
+    # Hide ticks and remove bottom ytick corresponding to 0 hours
+    ax.tick_params(axis="both", length=0)
+    ax.set_yticks(ax.get_yticks()[1:])
+
+    plt.savefig(f"{directory}/{title}.{output_extension}", bbox_inches="tight")
+    plt.show()
+
     
 # -- Generates excel spreadsheet with all usage information -- #
 
@@ -381,7 +430,7 @@ def monthyear(date):
 
     return month, year
 
-def make_report_sheet(context, report, directory=None):
+def make_report_sheet(context, report, group_keys, directory=None):
     if directory is None:
         directory = ""
     else:
@@ -390,11 +439,11 @@ def make_report_sheet(context, report, directory=None):
     months = report.months
     num_months = len(months)
 
-    group_usage = report.get_group_usage()
+    group_usage = report.get_group_usage(group_keys)
 
-    data_storage = report.query("homeStorage", idx=-1)
-    scratch_storage = report.query("scratchStorage", idx=-1)
-    project_storage = report.query("projectStorage", idx=-1)
+    data_storage = report.query_group_usage("homeStorage", idx=-1)
+    scratch_storage = report.query_group_usage("scratchStorage", idx=-1)
+    project_storage = report.query_group_usage("projectStorage", idx=-1)
 
     report_month, report_year = monthyear(months[-1])
 

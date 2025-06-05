@@ -102,6 +102,10 @@ class Context:
                 raise RuntimeError(f"The PI {owner} not found. Add them with `python add_group.py {owner} DEPARTMENT` and run again.")
 
 
+    def get_groups(self):
+        return self.gids
+
+
     def get_group_name(self, gid: str) -> str:
         if gid == "":
             return "Unknown"
