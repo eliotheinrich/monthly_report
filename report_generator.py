@@ -262,8 +262,8 @@ class StorageReportGenerator:
             else:
                 raise RuntimeException(f"Error parsing {amount} {suffix} into GB.")
 
-        usage = {"homeStorage": {}, "scratchStorage": {}, "projectStorage": {}}
-        storage_type_map = {"home": "homeStorage", "scratch": "scratchStorage", "projects": "projectStorage"}
+        usage = {"homeStorage": {}, "scratchStorage": {}, "projectStorage": {}, "nbuStorage": {}}
+        storage_type_map = {"home": "homeStorage", "scratch": "scratchStorage", "projects": "projectStorage", "nbu": "nbuStorage"}
 
         output = capture(f"tail -n +0 {self.context.path_to_quota}").strip().split('\n')[1:]
         for line in output:

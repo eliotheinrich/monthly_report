@@ -58,24 +58,27 @@ def save_usage(pkl_path, usage):
 
 
 def get_projects_and_owners():
-    ignored = {"dasarat", "sobled"}
-
-    command = f"ls -l1 /projects/"
-    output = capture(command).strip().split("\n")[1:]
+    root_directories = ["/projects/", "/nbu/"]
+    ignored = {"fmp2", "dasarat", "sobled"}
 
     projects = {}
     project_owners = {}
-    for line in output:
-        data = line.split()
-        owner = data[2]
-        if owner in ignored:
-            continue
-        project_name = data[-1]
-        projects[project_name] = owner
-        if owner not in project_owners:
-            project_owners[owner] = []
 
-        project_owners[owner].append(project_name)
+    for dir in root_directories:
+        command = f"ls -l1 {dir}"
+        output = capture(command).strip().split("\n")[1:]
+
+        for line in output:
+            data = line.split()
+            owner = data[2]
+            if owner in ignored:
+                continue
+            project_name = data[-1]
+            projects[project_name] = owner
+            if owner not in project_owners:
+                project_owners[owner] = []
+
+            project_owners[owner].append(project_name)
 
     return projects, project_owners
 
