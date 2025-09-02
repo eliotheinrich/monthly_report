@@ -31,13 +31,13 @@ def make_group_report(context, date, directory):
 
     for n, group in context.groups.iterrows():
         n += 2
-        gid = group[0]
-        projects = group[1]
-        last_name = group[2]
-        first_name = group[3]
-        email = group[4]
-        department = group[5]
-        ngid = group[6]
+        gid = group.iloc[0]
+        projects = group.iloc[1]
+        last_name = group.iloc[2]
+        first_name = group.iloc[3]
+        email = group.iloc[4]
+        department = group.iloc[5]
+        ngid = group.iloc[6]
 
         add_cell(sheet, n, 1, gid)
         add_cell(sheet, n, 2, projects)

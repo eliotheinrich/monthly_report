@@ -31,13 +31,13 @@ def make_user_report(context, date, directory):
 
     for n, user in context.users.iterrows():
         n += 2
-        uid = user[0]
-        nuid = user[1]
-        projects = user[2]
-        gid = user[3]
-        first_name = user[4]
-        last_name = user[5]
-        email = user[6]
+        uid = user.iloc[0]
+        nuid = user.iloc[1]
+        projects = user.iloc[2]
+        gid = user.iloc[3]
+        first_name = user.iloc[4]
+        last_name = user.iloc[5]
+        email = user.iloc[6]
 
         add_cell(sheet, n, 1, uid)
         add_cell(sheet, n, 2, projects)
