@@ -441,7 +441,7 @@ def make_report_sheet(context, report, group_keys, directory=None):
 
     group_usage = report.get_group_usage(group_keys)
 
-    data_storage = report.query_group_usage("homeStorage", idx=-1)
+    home_storage = report.query_group_usage("homeStorage", idx=-1)
     scratch_storage = report.query_group_usage("scratchStorage", idx=-1)
     project_storage = report.query_group_usage("projectStorage", idx=-1)
 
@@ -556,7 +556,7 @@ def make_report_sheet(context, report, group_keys, directory=None):
 
     sheet = wb.create_sheet("Storage")
     total_group_storage = {
-        "/data/ storage (GB)": data_storage, 
+        "/home/ storage (GB)": home_storage, 
         "/scratch/ storage (GB)": scratch_storage,
         "/project/ storage (GB)": project_storage,
     }
